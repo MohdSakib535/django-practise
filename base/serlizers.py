@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from base.models import Snippet,Resource
+from base.models import Snippet,Resource,Movie
 
 class Userserlizer(serializers.ModelSerializer):
     class Meta:
@@ -101,3 +101,11 @@ class ResourceSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(resource_data)
 
+
+
+class MovieSerializer(serializers.ModelSerializer):
+    movie_resource = ResourceSerializer()
+
+    class Meta:
+        model = Movie
+        fields = ['id', 'title', 'description', 'release_date', 'rating', 'us_gross', 'worldwide_gross', 'movie_resource']
