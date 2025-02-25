@@ -140,3 +140,83 @@ def fun1(request):
         return HttpResponse('created')
 
     return HttpResponse('get only')
+
+
+
+
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from base.renderer import CustomJSONRenderer
+
+class MyAPIView(APIView):
+    renderer_classes = [CustomJSONRenderer]
+
+    def get(self, request):
+        data = {"message": "Hello, world!"}
+        return Response(data)
+
+
+
+
+import csv
+import uuid
+import zipfile
+import os
+from django.http import HttpResponse
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .models import Movie
+
+def create_zip(zip_name, files):
+    zip_file_name = f"{zip_name}{uuid.uuid4()}.zip"
+    with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+        for file in files:
+            zipf.write(file)
+    return zip_file_name
+
+def remove_file_local_directory(files):
+    for file in files:
+        if os.path.exists(file):
+            os.remove(file)
+
+class ExportMovieInfoView(generics.GenericAPIView):
+    """API to export Movie data in CSV format inside a ZIP file."""
+
+    # permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            files = []
+
+            # Export Movie Data
+            movie_csv_filename = f"movies_{uuid.uuid4()}.csv"
+            with open(movie_csv_filename, "w", newline='') as csvfile:
+                csvwriter = csv.writer(csvfile)
+                csvwriter.writerow(["ID", "Title", "Description", "Release Date", "Rating", "US Gross", "Worldwide Gross", "Resource ID"])
+
+                for movie in Movie.objects.all():
+                    csvwriter.writerow([
+                        movie.id, movie.title, movie.description, movie.release_date, 
+                        movie.rating, movie.us_gross, movie.worldwide_gross, 
+                        movie.movie_resource.id if movie.movie_resource else None
+                    ])
+            files.append(movie_csv_filename)
+
+            # Create ZIP file
+            zip_name = "movie_data_"
+            zip_file_name = create_zip(zip_name, files)
+            files.append(zip_file_name)
+
+            # Return ZIP file as response
+            response = HttpResponse(open(zip_file_name, "rb"), content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename={zip_file_name}'
+
+            # Cleanup
+            remove_file_local_directory(files)
+
+            return response
+        except Exception:
+            return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

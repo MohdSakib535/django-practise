@@ -108,6 +108,12 @@ REST_FRAMEWORK = {
     'DEFAULT_METADATA_CLASS': 'rest_framework.metadata.SimpleMetadata'
 }
 
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+        'base.renderer.CustomJSONRenderer',  # Use your custom renderer
+        'rest_framework.renderers.BrowsableAPIRenderer',  # Optional, remove if you don't want the browsable API
+    ),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
