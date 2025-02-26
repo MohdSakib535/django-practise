@@ -50,7 +50,22 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('f',views.fun1),
     path('f1',views.MyAPIView.as_view()),
-    path('export',views.ExportMovieInfoView.as_view())
+    path('export',views.ExportMovieInfoView.as_view()),
+
+    # Poll Endpoints
+    path('polls/', views.PollListCreateView.as_view(), name='poll-list-create'),
+    path('polls/<int:pk>/', views.PollRetrieveUpdateView.as_view(), name='poll-retrieve-update'),
+    path('polls/<int:pk>/history/', views.PollHistoryView.as_view(), name='poll-history'),
+
+    # Choice Endpoints
+    path('choices/', views.ChoiceListCreateView.as_view(), name='choice-list-create'),
+    path('choices/<int:pk>/', views.ChoiceRetrieveUpdateView.as_view(), name='choice-retrieve-update'),
+    path('choices/<int:pk>/history/', views.ChoiceHistoryView.as_view(), name='choice-history'),
+
+
+
+
+   
     
 ]
 

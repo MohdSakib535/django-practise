@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from base.models import Snippet,Resource,Movie
+from base.models import *
 
 class Userserlizer(serializers.ModelSerializer):
     class Meta:
@@ -82,6 +82,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
+
+
+
 class ResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resource
@@ -109,3 +112,82 @@ class MovieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
         fields = ['id', 'title', 'description', 'release_date', 'rating', 'us_gross', 'worldwide_gross', 'movie_resource']
+
+
+
+
+
+class PollSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Poll
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # Remove 'history_user' from validated_data if it exists
+        history_user = validated_data.pop('history_user', None)
+
+        # Create the Poll instance
+        poll = Poll.objects.create(**validated_data)
+
+        # If history_user is provided, set it after creation
+        if history_user is not None:
+            poll.history.first().history_user = history_user
+            poll.history.first().save()
+
+        return poll
+    
+    # def update(self, instance, validated_data):
+    #     # Remove 'history_user' from validated_data if it exists
+    #     history_user = validated_data.pop('history_user', None)
+
+    #     # Update the Poll instance
+    #     poll = super().update(instance, validated_data)
+
+    #     # If history_user is provided, set it after update
+    #     if history_user is not None:
+    #         poll.history.first().history_user = history_user
+    #         poll.history.first().save()
+
+    #     return poll
+    
+
+class ChoiceSerializer(serializers.ModelSerializer):
+    # poll=PollSerializer(read_only=True)
+    # poll = serializers.CharField(source='poll.question', read_only=True)
+    poll = serializers.PrimaryKeyRelatedField(queryset=Poll.objects.all(), write_only=True)
+    poll_question = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Choice
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # Remove 'history_user' from validated_data if it exists
+        history_user = validated_data.pop('history_user', None)
+
+        # Create the Choice instance
+        choice = Choice.objects.create(**validated_data)
+
+        # If history_user is provided, set it after creation
+        if history_user is not None:
+            choice.history.first().history_user = history_user
+            choice.history.first().save()
+
+        return choice
+    
+    def get_poll_question(self, obj):
+        return obj.poll.question  # Return poll question in GET response
+
+    # def update(self, instance, validated_data):
+    #     # Remove 'history_user' from validated_data if it exists
+    #     history_user = validated_data.pop('history_user', None)
+
+    #     # Update the Choice instance
+    #     choice = super().update(instance, validated_data)
+
+    #     # If history_user is provided, set it after update
+    #     if history_user is not None:
+    #         choice.history.first().history_user = history_user
+    #         choice.history.first().save()
+
+    #     return choice

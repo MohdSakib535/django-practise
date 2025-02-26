@@ -1,9 +1,9 @@
 from django.shortcuts import render
-from base.serlizers import UserSerializer,SnippetSerlizers,ResourceSerializer,snippetser
+from base.serlizers import *
 from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from base.models import Snippet, Resource, Movie
+from base.models import *
 from drf_yasg.utils import swagger_auto_schema
 import logging
 from django.contrib.auth.models import Permission
@@ -220,3 +220,108 @@ class ExportMovieInfoView(generics.GenericAPIView):
             return response
         except Exception:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+from simple_history.utils import update_change_reason
+
+# GET & POST for Poll
+class PollListCreateView(generics.ListCreateAPIView):
+    queryset = Poll.objects.all()
+    serializer_class = PollSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        try:
+            update_change_reason(self.request, "Created via API")
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            # Log the error or handle it as needed
+        serializer.save(history_user=user)  # Associate history with the user
+
+
+## ✅ GET single Poll & UPDATE (PUT/PATCH)
+class PollRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = Poll.objects.all()
+    serializer_class = PollSerializer
+
+    def perform_update(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        try:
+            update_change_reason(self.request, "Updated via API")
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            # Log the error or handle it as needed
+        serializer.save(history_user=user)
+
+
+
+# 🚀 **Choice APIs**
+## ✅ GET all & POST new Choice
+class ChoiceListCreateView(generics.ListCreateAPIView):
+    queryset = Choice.objects.all()
+    serializer_class = ChoiceSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        try:
+            update_change_reason(self.request, "Created via API")
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            # Log the error or handle it as needed
+        serializer.save(history_user=user)  # Associate history with the user
+
+
+
+
+
+## ✅ GET single Choice & UPDATE (PUT/PATCH)
+class ChoiceRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    queryset = Choice.objects.all()
+    serializer_class = ChoiceSerializer
+
+    def perform_update(self, serializer):
+        user = self.request.user if self.request.user.is_authenticated else None
+        try:
+            update_change_reason(self.request, "Updated via API")
+        except AttributeError as e:
+            print(f"AttributeError: {e}")
+            # Log the error or handle it as needed
+        serializer.save(history_user=user)
+
+
+# 🚀 **History APIs**
+## ✅ Fetch Poll History
+class PollHistoryView(APIView):
+    def get(self, request, pk):
+        poll = Poll.objects.get(pk=pk)
+        history = poll.history.all()
+        data = [
+            {
+                "id": record.id,
+                "question": record.question,
+                "history_date": record.history_date,
+                "history_user": record.history_user.username if record.history_user else None,
+                "history_type": record.history_type
+            }
+            for record in history
+        ]
+        return Response(data)
+
+## ✅ Fetch Choice History
+class ChoiceHistoryView(APIView):
+    def get(self, request, pk):
+        choice = Choice.objects.get(pk=pk)
+        history = choice.history.all()
+        data = [
+            {
+                "id": record.id,
+                "choice_text": record.choice_text,
+                "votes": record.votes,
+                "history_date": record.history_date,
+                "history_user": record.history_user.username if record.history_user else None,
+                "history_type": record.history_type
+            }
+            for record in history
+        ]
+        return Response(data)
