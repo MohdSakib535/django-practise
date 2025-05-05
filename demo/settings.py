@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'drf_yasg',
     'base',
+    'oopswithdjango',
     'rest_framework',
     'simple_history',
 

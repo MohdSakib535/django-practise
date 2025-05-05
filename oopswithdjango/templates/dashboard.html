@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block extra_js %}
+<script>
+// Enhanced Vehicle Dashboard JavaScript
+$(document).ready(function() {
+    // Initialize Bootstrap components
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Alert container for dynamic messages
+    const alertContainer = $('.alert-container');
+    
+    // Service button handler with improved UX
+    $(document).on('click', '.service-btn', function() {
+        const btn = $(this);
+        const vehicleRow = btn.closest('tr');
+        const vehicleId = btn.data('vehicle-id');
+        console.log("v id-------",vehicleId);
+        
+        const vehicleType = btn.data('vehicle-type');
+        console.log("---",vehicleType);
+        
+        const serviceType = btn.data('service-type') || 'basic';
+        
+        // Visual feedback
+        btn.prop('disabled', true)
+           .html(`<span class="spinner-border spinner-border-sm" role="status"></span> Servicing...`);
+        vehicleRow.addClass('table-info');
+        
+        
+        // AJAX call to service endpoint
+        $.ajax({
+            url: `/service/${vehicleType}/${vehicleId}/`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify({
+                service_type: serviceType
+            }),
+            success: function(response) {
+                if(response.status === 'success') {
+                    showAlert('success', 
+                        `${response.vehicle.make} ${response.vehicle.model} serviced (${serviceType})`,
+                        3000);
+                    
+                    // Update the row directly instead of reloading
+                    vehicleRow.find('.badge').removeClass('bg-danger').addClass('bg-success').text('OK');
+                    vehicleRow.find('[data-last-service]').text(response.service_performed.last_service_date || 'Today');
+                    vehicleRow.removeClass('table-warning table-info').addClass('table-success');
+                    
+                    // Add temporary animation
+                    vehicleRow.hide().fadeIn(500);
+                } else {
+                    showAlert('warning', response.message, 5000);
+                }
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                showAlert('danger', 
+                    response?.message || 'Service request failed', 
+                    5000);
+            },
+            complete: function() {
+                btn.prop('disabled', false).text('Service Now');
+                vehicleRow.removeClass('table-info');
+            }
+        });
+    });
+    
+    // Improved alert function with auto-dismiss
+    function showAlert(type, message, duration=5000) {
+        const alertId = 'alert-' + Date.now();
+        const alertHtml = `
+        <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                               type === 'danger' ? 'fa-exclamation-circle' : 
+                               'fa-info-circle'} me-2"></i>
+                <div>${message}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        `;
+        
+        alertContainer.append(alertHtml);
+        
+        // Auto-dismiss if duration is set
+        if (duration > 0) {
+            setTimeout(() => {
+                $(`#${alertId}`).alert('close');
+            }, duration);
+        }
+    }
+    
+    // Vehicle type dropdown change handler
+    $('.vehicle-type-dropdown .dropdown-item').on('click', function(e) {
+        e.preventDefault();
+        const selectedType = $(this).data('value');
+        const dropdownButton = $('.vehicle-type-dropdown .dropdown-toggle');
+        
+        // Update button text
+        dropdownButton.html(`
+            ${$(this).text()} 
+            <span class="caret"></span>
+        `);
+        
+        // Show loading state
+        $('.vehicle-table').addClass('table-loading');
+        
+        // Load new vehicle data
+        $.ajax({
+            url: window.location.pathname,
+            data: { vehicle_type: selectedType },
+            success: function(data) {
+                const newContent = $(data).find('.vehicle-table-container').html();
+                $('.vehicle-table-container').html(newContent);
+            },
+            complete: function() {
+                $('.vehicle-table').removeClass('table-loading');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Alert container for dynamic messages -->
+    <div class="alert-container position-fixed top-0 end-0 p-3" style="z-index: 1100"></div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Vehicle Dashboard</h1>
+        
+        <!-- Enhanced Vehicle Type Dropdown -->
+        <div class="dropdown vehicle-type-dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" 
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                {{ selected_type|title }}
+            </button>
+            <ul class="dropdown-menu">
+                {% for type in vehicle_types %}
+                <li>
+                    <a class="dropdown-item {% if selected_type == type.value %}active{% endif %}" 
+                       href="#" data-value="{{ type.value }}">
+                       {{ type.label }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Vehicle Table Container -->
+    <div class="vehicle-table-container">
+        <div class="table-responsive">
+            <table class="table table-hover vehicle-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Make/Model</th>
+                        <th>Type</th>
+                        <th>Year</th>
+                        <th>Mileage</th>
+                        <th data-last-service>Last Service</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vehicle in vehicles %}
+                    <tr class="{% if vehicle.needs_service %}table-warning{% endif %}">
+                        <td>{{ vehicle.make }} {{ vehicle.model }}</td>
+                        <td>{{ vehicle.type }}</td>
+                        <td>{{ vehicle.year }}</td>
+                        <td>{{ vehicle.mileage }}</td>
+                        <td>{{ vehicle.last_service|date:"Y-m-d"|default:"Never" }}</td>
+                        <td>
+                            <span class="badge {% if vehicle.needs_service %}bg-danger{% else %}bg-success{% endif %}">
+                                {% if vehicle.needs_service %}Needs Service{% else %}OK{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-primary service-btn" 
+                                        data-vehicle-id="{{ vehicle.id }}"
+                                        data-vehicle-type="{{ vehicle.vehicle_type }}"
+                                        data-service-type="basic"
+                                        title="Perform basic maintenance">
+                                    <i class="fas fa-wrench"></i> Basic
+                                </button>
+                                <button class="btn btn-success service-btn" 
+                                        data-vehicle-id="{{ vehicle.id }}"
+                                        data-vehicle-type="{{ vehicle.vehicle_type }}"
+                                        data-service-type="premium"
+                                        title="Perform premium maintenance">
+                                    <i class="fas fa-star"></i> Premium
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="fas fa-car me-2"></i>No vehicles found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Loading indicator for table */
+.table-loading {
+    position: relative;
+    opacity: 0.7;
+}
+.table-loading::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: 50px 50px;
+    z-index: 1000;
+}
+
+/* Alert animations */
+.alert {
+    transition: all 0.3s ease;
+}
+.alert.alert-show {
+    animation: slideIn 0.3s forwards;
+}
+.alert.alert-hide {
+    animation: slideOut 0.3s forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+</style>
+{% endblock %}

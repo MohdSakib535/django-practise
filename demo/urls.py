@@ -21,6 +21,7 @@ from base import views
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+from oopswithdjango import views as ov
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -63,7 +64,10 @@ urlpatterns = [
     path('choices/<int:pk>/history/', views.ChoiceHistoryView.as_view(), name='choice-history'),
 
 
-
+    #oops with django
+    path("op",ov.vehicle_data_created),
+    path("vd",ov.vehicle_dashboard,name="vehicle_dashboard"),
+    path('service/<str:vehicle_type>/<int:vehicle_id>/', ov.service_vehicle, name='service_vehicle')
 
    
     
