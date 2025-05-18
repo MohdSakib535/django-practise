@@ -67,7 +67,9 @@ urlpatterns = [
     #oops with django
     path("op",ov.vehicle_data_created),
     path("vd",ov.vehicle_dashboard,name="vehicle_dashboard"),
-    path('service/<str:vehicle_type>/<int:vehicle_id>/', ov.service_vehicle, name='service_vehicle')
+    path('service/<str:vehicle_type>/<int:vehicle_id>/', ov.service_vehicle, name='service_vehicle'),
+    path('schema-viewer/', include('schema_viewer.urls')), #for schema viewer
+    path('silk/', include('silk.urls', namespace='silk'))
 
    
     

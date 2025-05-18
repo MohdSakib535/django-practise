@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     'oopswithdjango',
     'rest_framework',
     'simple_history',
+    'schema_viewer',
+    'silk',
+    'django_extensions',
 
 ]
 
@@ -54,7 +57,13 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'simple_history.middleware.HistoryRequestMiddleware',
+    'silk.middleware.SilkyMiddleware',
 ]
+
+GRAPH_MODELS = {
+  'all_applications': True,
+  'group_models': True,
+}
 
 ROOT_URLCONF = 'demo.urls'
 
